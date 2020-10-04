@@ -117,7 +117,7 @@ def query(request):
         else:
             raise
     result = {
-        'results': [result.get_data() for result in results],
+        'results': [result.get_data().decode("utf-8") for result in results],
     }
 
     if settings.LOG_QUERIES:
