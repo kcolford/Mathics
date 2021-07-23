@@ -16,6 +16,7 @@
 \usepackage{graphics}
 \usepackage{textcomp}
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{mathpazo}
 \usepackage[mathpazo]{flexisym}
 \usepackage{breqn}
@@ -63,7 +64,8 @@
     {~}{{\textasciitilde}}1
     {⧦}{{===}}1
     {}{{=>}}1
-    {⊻}{{xor}}1
+    {⇒}{{$\Rightarrow$}}1
+    {⊻}{{$\oplus$}}1
     {…}{{...}}1
     {∫}{{S}}1
     {}{{d}}1
@@ -102,6 +104,9 @@
 \newcommand{\sectionstart}{}
 \newcommand{\sectionend}{}
 
+\newcommand{\subsectionstart}{}
+\newcommand{\subsectionend}{}
+
 \newcommand{\chapterstart}{
 }
 \newcommand{\chaptersections}{
@@ -114,7 +119,7 @@
 
 \newcommand{\referencestart}{
 \setcounter{chapter}{0}
-\def\thechapter{\Roman{chapter}}
+%\def\thechapter{\Roman{chapter}}
 \renewcommand{\chaptersections}{
 	\minitoc
 	\begin{multicols*}{2}
@@ -135,6 +140,9 @@
 
 \newenvironment{chapterintro}{\begin{multicols}{2}}{\end{multicols}}
 \newenvironment{chapterintroshort}{\par}{}
+
+\newenvironment{guidesectionintro}{\begin{multicols}{2}}{\end{multicols}}
+\newenvironment{guidesectionintroshort}{\par}{}
 
 \newcommand{\codewidth}{0.9\columnwidth}
 

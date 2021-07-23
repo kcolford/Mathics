@@ -1,7 +1,18 @@
+# -*- coding: utf-8 -*-
+"""Code Compilation
+
+Code compilation allows Mathics functions to be run faster.
+
+When LLVM and Python libraries are available, compilation produces LLVM code.
+"""
+
+
 import ctypes
 
 from mathics.version import __version__  # noqa used in loading to check consistency.
-from mathics.builtin.base import Builtin, BoxConstruct
+
+from mathics.builtin.base import Builtin
+from mathics.builtin.box.compilation import CompiledCodeBox
 from mathics.core.evaluation import Evaluation
 from mathics.core.expression import (
     Atom,
@@ -17,9 +28,10 @@ from types import FunctionType
 class Compile(Builtin):
     """
     <dl>
-    <dt>'Compile[{$x1$, $x2$, ...}, $expr$]'
+      <dt>'Compile[{$x1$, $x2$, ...}, $expr$]'
       <dd>Compiles $expr$ assuming each $xi$ is a $Real$ number.
-    <dt>'Compile[{{$x1$, $t1$} {$x2$, $t1$} ...}, $expr$]'
+
+      <dt>'Compile[{{$x1$, $t1$} {$x2$, $t1$} ...}, $expr$]'
       <dd>Compiles assuming each $xi$ matches type $ti$.
     </dl>
 
@@ -170,9 +182,6 @@ class CompiledCode(Atom):
         return "-CompiledCode-"
 
     def boxes_to_text(self, leaves=None, **options):
-        from trepan.api import debug
-
-        debug()
         if not leaves:
             leaves = self._leaves
         return "-CompiledCode-"
@@ -204,27 +213,6 @@ class CompiledCode(Atom):
 
     def atom_to_boxes(self, f, evaluation):
         return CompiledCodeBox(String(self.__str__()), evaluation=evaluation)
-
-
-class CompiledCodeBox(BoxConstruct):
-    """
-    Used internally by <i>CompileCode[]</i>.
-    """
-
-    def boxes_to_text(self, leaves=None, **options):
-        if leaves is None:
-            leaves = self._leaves
-        return leaves[0].value
-
-    def boxes_to_mathml(self, leaves=None, **options):
-        if leaves is None:
-            leaves = self._leaves
-        return leaves[0].value
-
-    def boxes_to_tex(self, leaves=None, **options):
-        if leaves is None:
-            leaves = self._leaves
-        return leaves[0].value
 
 
 class CompiledFunction(Builtin):

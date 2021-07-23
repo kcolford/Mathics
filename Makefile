@@ -11,7 +11,7 @@ RM  ?= rm
 
 .PHONY: all build \
    check clean \
-   develop dist doc doc-data djangotest \
+   develop dist doctest doc-data djangotest \
    gstest pytest \
    rmChangeLog \
    test
@@ -37,11 +37,16 @@ build:
 develop:
 	$(PIP) install -e .
 
+#: Set up to run from the source tree with full dependencies
+develop-full:
+	$(PIP) install -e .[full]
+
+
 #: Make distirbution: wheels, eggs, tarball
 dist:
 	./admin-tools/make-dist.sh
 
-#: Install mathics
+#: Install Mathics
 install:
 	$(PYTHON) setup.py install
 
@@ -53,11 +58,12 @@ clean:
 	rm mathics/*/*.so; \
 	for dir in mathics/doc ; do \
 	   ($(MAKE) -C "$$dir" clean); \
-	done;
+	done; \
+	rm -f factorials || true
 
 #: Run py.test tests. Use environment variable "o" for pytest options
 pytest:
-	py.test test $o
+	py.test $(PYTEST_WORKERS) test $o
 
 
 #: Run a more extensive pattern-matching test
@@ -66,16 +72,21 @@ gstest:
 
 
 #: Create data that is used to in Django docs and to build TeX PDF
-doc-data mathics/doc/tex/data: mathics/builtin/*.py mathics/doc/documentation/*.mdoc mathics/doc/documentation/images/*
-	$(PYTHON) mathics/test.py -ot -k
+doc-data: mathics/builtin/*.py mathics/doc/documentation/*.mdoc mathics/doc/documentation/images/*
+	$(PYTHON) mathics/docpipeline.py --output --keep-going
+
+#: Run tests that appear in docstring in the code.
+doctest-workaround:
+	SANDBOX=$(SANDBOX) $(PYTHON) mathics/docpipeline.py --exclude=NIntegrate,MaxRecursion
+	SANDBOX=$(SANDBOX) $(PYTHON) mathics/docpipeline.py --sections=NIntegrate,MaxRecursion
 
 #: Run tests that appear in docstring in the code.
 doctest:
-	SANDBOX=$(SANDBOX) $(PYTHON) mathics/test.py $o
+	SANDBOX=$(SANDBOX) $(PYTHON) mathics/docpipeline.py $o
 
-#: Make Mathics PDF manual
-doc mathics.pdf: mathics/doc/tex/data
-	(cd mathics/doc/tex && $(MAKE) mathics.pdf)
+#: Make Mathics PDF manual via Asymptote and LaTeX
+texdoc doc:
+	(cd mathics/doc/tex && $(MAKE) doc)
 
 #: Remove ChangeLog
 rmChangeLog:

@@ -159,7 +159,6 @@ class _SetOperator(object):
         message = False
 
         allow_custom_tag = False
-
         focus = lhs
 
         if name == "System`N":
@@ -205,8 +204,12 @@ class _SetOperator(object):
         else:
             allow_custom_tag = True
 
+        # TODO: the following provides a hacky fix for 1259. I know @rocky loves
+        # this kind of things, but otherwise we need to work on rebuild the pattern
+        # matching mechanism...
+        evaluation.ignore_oneidentity = True
         focus = focus.evaluate_leaves(evaluation)
-
+        evaluation.ignore_oneidentity = False
         if tags is None and not upset:
             name = focus.get_lookup_name()
             if not name:
@@ -311,8 +314,9 @@ class _SetOperator(object):
             #    $Context = $Context <> "test`"
             #
             if new_context.startswith("`"):
-                new_context = evaluation.definitions.get_current_context() + new_context.lstrip(
-                    "`"
+                new_context = (
+                    evaluation.definitions.get_current_context()
+                    + new_context.lstrip("`")
                 )
 
             evaluation.definitions.set_current_context(new_context)
@@ -374,7 +378,6 @@ class _SetOperator(object):
             ),
             Expression("OptionValue", lhs.get_head(), Symbol("$cond$")),
         )
-
         rhs_name = rhs.get_head_name()
         while rhs_name == "System`Condition":
             if len(rhs.leaves) != 2:
@@ -394,7 +397,6 @@ class _SetOperator(object):
                 lhs,
                 condition.leaves[1].apply_rules([rulopc], evaluation)[0],
             )
-
         rule = Rule(lhs, rhs)
         count = 0
         defs = evaluation.definitions
@@ -425,7 +427,6 @@ class _SetOperator(object):
                     defs.add_rule(tag, rule)
         if count == 0:
             return False
-
         return True
 
     def assign(self, lhs, rhs, evaluation):
@@ -999,15 +1000,15 @@ def _get_usage_string(symbol, evaluation, htmlout=False):
         bio = builtins.get(definition.name)
 
     if bio is not None:
-        from mathics.doc.doc import Doc
+        from mathics.doc.common_doc import XMLDoc
 
         docstr = bio.builtin.__class__.__doc__
         if docstr is None:
             return None
         if htmlout:
-            usagetext = Doc(docstr).html()
+            usagetext = XMLDoc(docstr).html()
         else:
-            usagetext = Doc(docstr).text(0)
+            usagetext = XMLDoc(docstr).text(0)
         usagetext = re.sub(r"\$([0-9a-zA-Z]*)\$", r"\1", usagetext)
         return usagetext
     return None
@@ -1922,11 +1923,11 @@ class LoadModule(Builtin):
     def apply(self, module, evaluation):
         "LoadModule[module_String]"
         try:
-            module_loaded = evaluation.definitions.load_pymathics_module(module.value)
-        except PyMathicsLoadException as e:
+            evaluation.definitions.load_pymathics_module(module.value)
+        except PyMathicsLoadException:
             evaluation.message(self.name, "notmathicslib", module)
             return SymbolFailed
-        except ImportError as e:
+        except ImportError:
             evaluation.message(self.get_name(), "notfound", module)
             return SymbolFailed
         else:

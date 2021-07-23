@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+"""
+Unit tests from builtins ... calculus.py
+"""
+
 from .helper import check_evaluation
 
 
@@ -34,6 +38,5 @@ def test_calculus():
             "{x->1.51213}",
             "Issue #1235",
         ),
-
     ):
         check_evaluation(str_expr, str_expected, message)

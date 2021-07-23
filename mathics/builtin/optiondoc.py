@@ -33,12 +33,19 @@ class Automatic(Builtin):
      = {Background :> Automatic, Exclusions :> Automatic, ImageSize :> Automatic, MaxRecursion :> Automatic, PlotRange :> Automatic, PlotRangePadding :> Automatic}
     """
 
+
 class Axes(Builtin):
     """
     <dl>
       <dt>'Axes'
-      <dd>is an option for graphics functions that specifies whether axes should be drawn.
+      <dd>is an option for charting and graphics functions that specifies whether axes should be drawn.
     </dl>
+
+    <ul>
+      <li> 'Axes->True' draws all axes.
+      <li> 'Axes->False' draws no axes.
+      <li> 'Axes->{False,True}' draws an axis $y$ but no $x$ axis in two dimensions.
+    </ul>
 
     >> Graphics[Circle[], Axes -> True]
      = -Graphics-
@@ -66,6 +73,27 @@ class Bottom(Builtin):
 
     >> ListLinePlot[Table[Sin[x], {x, -5, 5, 0.5}], Filling->Bottom]
      = -Graphics-
+    """
+
+
+class ChartLabels(Builtin):
+    """
+    <dl>
+      <dt>'ChartLabels'
+      <dd>is a charting option that specifies what labels should be used for chart elements.
+    </dl>
+
+    >> PieChart[{30, 20, 10}, ChartLabels -> {Dogs, Cats, Fish}]
+     = -Graphics-
+    """
+
+
+class ChartLegends(Builtin):
+    """
+    <dl>
+      <dt>'ChartLegends'
+      <dd>is a charting option.
+    </dl>
     """
 
 
@@ -139,7 +167,7 @@ class Mesh(Builtin):
     """
     <dl>
        <dt>'Mesh'
-      <dd>is an option for 'Plot' that specifies the mesh to be drawn. The default is 'Mesh->None'.
+      <dd>is a charting option, such as for 'Plot', 'BarChart', 'PieChart', etc. that specifies the mesh to be drawn. The default is 'Mesh->None'.
      </dl>
 
     >> Plot[Sin[Cos[x^2]],{x,-4,4},Mesh->All]
@@ -176,13 +204,13 @@ class PlotRange(Builtin):
     """
     <dl>
       <dt>'PlotRange'
-      <dd>is an option for 'Plot' that gives the range of coordinates to include in a plot.
+      <dd>is a charting option, such as for 'Plot', 'BarChart', 'PieChart', etc. that gives the range of coordinates to include in a plot.
     </dl>
     <ul>
-      <li>All all points are included.</li>
-      <li>Automatic - outlying points are dropped.</li>
-      <li>$max$ - explicit limit for each function.</li>
-      <li>{$min$, $max$} - explicit limits for $y$ (2D), $z$ (3D), or array value.s</li>
+      <li>All all points are included.
+      <li>Automatic - outlying points are dropped.
+      <li>$max$ - explicit limit for each function.
+      <li>{$min$, $max$} - explicit limits for $y$ (2D), $z$ (3D), or array values.
       <li>{{$x$_$min$, $x$_$max$}, {{$y_min}, {$y_max}} - explit limits for $x$ and $y$.
     </ul>
 
@@ -202,8 +230,8 @@ class TicksStyle(Builtin):
     </dl>
 
     <ul>
-    <li>TicksStyle gives styles for both tick marks and tick labels.</li>
-    <li>TicksStyle can be used in both two  and three-dimensional graphics.</li>
+    <li>TicksStyle gives styles for both tick marks and tick labels.
+    <li>TicksStyle can be used in both two  and three-dimensional graphics.
     <li>TicksStyle->$list$ specifies the colors of each of the axes.
     </ul>
 

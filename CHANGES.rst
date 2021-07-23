@@ -1,42 +1,211 @@
 CHANGES
 =======
 
-
-2.1.1
+3.1.0
 -----
 
-New builtins
+New variables and builtins
+++++++++++++++++++++++++++
+
+* ``Arrow`` for Graphics3D (preliminary)
+* ``Cylinder`` (preliminary)
+* ``Factorial2`` PR #1459 Issue #682
+
+Enhancements
 ++++++++++++
 
+Large sections like the "Strings and Characters", "Integer Functions" and "Lists" sections
+have been broken up into subsections. These more closely match
+online WL "Guide" sections.  This is beneficial not just in the
+documentation, but also for code organization. See PRs #1464, #1473.
+
+A lot more work is needed here.
+
+The Introduction section of the manual has been revised. Licensing and Copyright/left sections
+have been reformatted for non-fixed-width displays. #1474
+
+PolarPlot documentation was improved. #1475.
+
+A getter/setter method for Mathics settings was added #1472.
+
+
+Bugs
+++++
+
+* Add ``requirements-*.txt``to distribution files. ``pip install Mathics3[dev]`` should work now. PR #1461
+* Some ``PointBox`` bugs were fixed
+* Some ``Arrow3DBox`` and ``Point3DBox`` bugs were fixed PR #1463
+* Fix bug in ``mathics`` CLI when  ``-script`` and ``-e`` were combined PR #1455
+
+3.0.0
+-----
+
+Overall there is a major refactoring underway of how formatting works
+and its interaction with graphics.  More work will come in later releases.
+
+Some of the improvements are visible not here but in the front-ends
+mathicsscript and mathics-django. In mathicsscript, we can now show
+SVG images (via matplotlib).  In Mathics Django, images and threejs
+graphs are no longer embedded in MathML.
+
+A lot of the improvements in this release were done or made possible with the help of
+Tiago Cavalcante Trindade.
+
+Enhancements
+++++++++++++
+
+It is now possible to get back SVG, and graphics that are not embedded in MathML.
+
+The code is now Pyston 2.2 compatible. However ``scipy`` ``lxml`` are
+not currently available on Pyston so there is a slight loss of
+functionality. The code runs about 30% faster under Pyston 2.2. Note
+that the code also works under PyPy 3.7.
+
+Bugs
+++++
+
+* Tick marks and the placement of numbers on charts have been corrected. PR #1437
+* Asymptote now respects the ``PointSize`` setting.
+* In graphs rendered in SVG, the ``PointSize`` has been made more closely match Mathematica.
+* Polygons rendered in Asymptote now respects the even/odd rule for filling areas.
+
+Density Plots rendered in SVG broke with this release. They will be reinstated in the future.
+
+Documentation
++++++++++++++
+
+Go over settings file to ensure usage names are full sentences.
+
+We have started to put more builtins in the sections or subsections
+following the organization in Mathematics 5 or as found in the online
+Wolfram Language Reference. As a result, long lists in previous topics
+are a bit shorter and there are now more sections. This work was
+started in 2.2.0.
+
+More work is needed on formatting and showing this information, with
+the additional breakout we now have subsections. More reorganization
+and sectioning is needed.
+
+These cleanups will happen in a future version.
+
+Chapters without introductory text like ``Structural Operations``, or ``Tensors`` have had descriptions added.
+
+Sections that were empty have either been expanded or removed because
+the underlying name was never a user-level built in, e.g. the various
+internal Boxing functions like ``DiskBox``, or ``CompiledCodeBox``
+
+Documentation specific builtins like ``PolarPlot`` or
+``BernsteinBasis`` have been added improved, and document examples
+have been revised such as for ``PieChart``, ``Pi`` and others.
+
+The Mathics Gallery examples have been updated.
+
+Some slight improvements were made to producing the PDF and more kinds
+of non-ASCII symbols are tolerated. Expect more work on this in the
+future via tables from the `Mathics Scanner <https://pypi.org/project/Mathics-Scanner/1.2.1/>`_ project.
+
+Chapters are no longer in Roman Numerals.
+
+
+Internal changes
+++++++++++++++++
+
+* ``docpipline.py``  accepts the option ``--chapters`` or ``-c`` to narrow tests to a particular chapter
+* Format routines have been isolated into its own module. Currently we have format routines for SVG, JSON and
+  Asymptote. Expect more reorganization in the future.
+* Boxing routines have been isolated to its own module.
+* The entire code base has been run through the Python formatter `black <https://black.readthedocs.io/en/stable/>`_.
+* More Python3 types to function signatures have been added.
+* More document tests that were not user-visible have been moved to
+  unit tests which run faster. More work is needed here.
+
+2.2.0
+-----
+
+Package update
+++++++++++++++
+
+- SymPy 1.8
+
+New variables and builtins
+++++++++++++++++++++++++++
+
 * ``Arg``
+* ``CoefficientArrays`` and ``Collect`` (#1174, #1194)
 * ``Dispatch``
+* ``FullSimplify``
+* ``LetterNumber`` #1298. The ``alphabet`` parameter supports only a minimal number of languages.
+* ``MemoryAvailable``
+* ``MemoryInUse``
+* ``Nand`` and ``Nor`` logical functions.
 * ``Series``,  ``O`` and ``SeriesData``
 * ``StringReverse``
-* All of the named colors, e.g. ``Brown`` or ``LighterMagenta``
+* ``$SystemMemory``
+* Add all of the named colors, e.g. ``Brown`` or ``LighterMagenta``.
 
 
 
 Enhancements
 ++++++++++++
 
+* a function `evaluate_predicate` allows for a basic predicate evaluation using `$Assumptions`.
+* ``Attributes`` accepts a string parameter.
+* ``Cases`` accepts Heads option. Issue #1302.
 * ``ColorNegate`` for colors is supported.
 * ``D`` and ``Derivative`` improvements.
+* ``Expand`` and ``ExpandAll`` now support a second parameter ``patt`` Issue #1301.
+* ``Expand`` and ``ExpandAll`` works with hyperbolic functions (`Sinh`, `Cosh`, `Tanh`, `Coth`).
 * ``FileNames`` returns a sorted list (#1250).
-* ``FindRoot`` now receives several optional parameters like ``Method`` and ``MaxIterations``.
+* ``FindRoot`` now accepts several optional parameters like ``Method`` and ``MaxIterations``. See Issue #1235.
 * ``FixedPoint`` now supports the ``SameTest`` option.
-* ``ReplaceRepeated`` and ``FixedPoint`` now supports the ``MaxIteration`` option (#1260).
-* ``StringTake`` now accepts form containing a list of strings and specification (#1297).
+* ``mathics`` CLI now uses its own Mathics ``settings.m`` file
+* ``Prepend`` works with ``DownValues`` Issue #1251
+* ``Prime`` and ``PrimePi`` now accept a list parameter and have the ``NumericFunction`` attribute.
+* ``Read`` with ``Hold[Expression]`` now supported. (#1242)
+* ``ReplaceRepeated`` and ``FixedPoint`` now supports the ``MaxIteration`` option. See Issue #1260.
+* ``Simplify`` performs a more sophisticated set of simplifications.
+* ``Simplify`` accepts a second parameter that temporarily overwrites ``$Assumptions``.
+* ``StringTake`` now accepts form containing a list of strings and specification. See Issue #1297.
 * ``Table`` [*expr*, *n*] is supported.
+* ``ToExpression`` handles multi-line string input.
 * ``ToString`` accepts an optional *form* parameter.
-* ``ToExpression`` handles multi-line string input
-* The implementation of Streams was redone
+* ``ToExpression`` handles multi-line string input.
+* ``$VersionNumber`` now set to 10.0 (was 6.0).
+* The implementation of Streams was redone.
+* Function ``mathics.core.definitions.autoload_files`` was added and
+  exposed to allow front-ends to provide their own custom Mathics.
+  settings.
+* String output in the ``mathics`` terminal has surrounding quotes to make it more visually distinct from unexpanded and symbol output.
+  To disable this behavior use ``--strict-wl-output``.
+
 
 Bug fixes
 +++++++++
 
-* ``SetTagDelayed`` does not evaluate now the rhs before assignment.
-* ``$InstallationDirectory`` starts out Unprotected
+* ``SetTagDelayed`` now does not evaluate the RHS before assignment.
+* ``$InstallationDirectory`` starts out ``Unprotected``.
 * ``FindRoot`` now handles equations.
+* Malformed Patterns are detected and an error message is given for them.
+* Functions gone over to ensure the ``Listable`` and ``NumericFunction`` properties are correct.
+
+
+Incompatible changes
+--------------------
+
+* ``System`$UseSansSerif`` moved from core and is sent front-ends using ``Settings`$UseSansSerif``.
+
+
+Internal changes
+----------------
+
+* ``docpipeline.py``  accepts the option ``-d`` to show how long it takes to parse, evaluate and compare each individual test.
+  ``-x`` option (akin to ``pytests -x`` is a short-hand for stop on first error
+* Some builtin functions have been grouped together in a module
+  underneath the top-level builtin directory.  As a result, in the
+  documents you will list some builtins listed under an overarching
+  categery like ``Specific Functions`` or ``Graphics, Drawing, and
+  Images``. More work is expected in the future to improve document sectioning.
+* ``System`$Notebooks`` is removed from settings. It is in all of the front-ends now.
 
 
 2.1.0
@@ -85,7 +254,7 @@ Pymathics Modules
 +++++++++++++++++
 
 * Pymathics modules now can run initialization code when are loaded.
-* The ``builtins`` list is not hardliked to the library anymore. This simplifies
+* The ``builtins`` list is not hard-linked to the library anymore. This simplifies
   the loading and reloading of pymathics modules.
 * Decoupling of BoxConstructors from the library. Now are defined at the
   level of the definition objects. This is useful for customizing the
@@ -95,10 +264,10 @@ Pymathics Modules
 Miscellanea
 +++++++++++
 
-* A pass was made to improve Microsoft Windows compatability and testing Windows under MSYS.
+* A pass was made to improve Microsoft Windows compatibility and testing Windows under MSYS.
 * Include numpy version in version string. Show in CLI
 * Small CLI tweaks ``--colors=None`` added to match mathicsscript.
-* In the ``BaseExpression`` and derivated classes, the method ``boxes_to_xml`` now are called ``boxes_to_mathml``.
+* In the ``BaseExpression`` and derived classes, the method ``boxes_to_xml`` now are called ``boxes_to_mathml``.
 * In the ``format`` method of the class ``Evaluation``,  the builtin ``ToString`` is called instead of  ``boxes_to_text``
 * In order to control the final form of boxes from the user space in specific symbols and contexts.
 * ``GraphicsBox`` now have two methods:  ``to_svg`` and  ``to_mathml``. The first produces SVG plain text while the second produces ``<mglyph ...>`` tags with base64 encoded SVGs.
@@ -121,7 +290,7 @@ What's to expect in a Future Release
 To accommodate growth and increased use of pieces of Mathics inside other packages, parts of Mathics have been split off and moved to separate packages. In particular:
 
 * The Django front-end is now a PyPI installable package called `Mathics-Django <https://pypi.org/project/Mathics-Django/>`_.
-* Scanner routines, character translation tables to/from unicode, and character properties are now `mathics-scanner https://github.com/Mathics3/mathics-scanner`_.
+* Scanner routines, character translation tables to/from Unicode, and character properties are now `mathics-scanner https://github.com/Mathics3/mathics-scanner`_.
 * Specific builtins involving heavy, non-standard routines were moved to pymathics modules `pymathics-graph https://github.com/Mathics3/pymathics-graph`_, `pymathics-natlang https://github.com/Mathics3/pymathics-natlang`_.
 
 Incompatible changes:
@@ -214,7 +383,7 @@ Future
 * Work is also being done on asymptote. See `PR #1145 <https://github.com/mathics/Mathics/pull/1145>`_.
 * Makeboxes is being decoupled from a renderer. See `PR #1140 <https://github.com/mathics/Mathics/pull/1140>`_.
 * Inline SVG will be supported (right now SVG is binary).
-* Better support integrating unicode in output (such as for Rule arrows) is in the works. These properties will be in the scanner package.
+* Better support integrating Unicode in output (such as for Rule arrows) is in the works. These properties will be in the scanner package.
 * A method option ("mpmath", "sympy", or "numpy") will be added to the ``N[]``. See `PR #1144 <https://github.com/mathics/Mathics/pull/1144>`_.
 
 
@@ -264,7 +433,7 @@ Enhancements and bug fixes
 - Extend ``DeleteCases`` to accept a levelspec parameter
 - Set ``Evaluation#exc_result`` to capture ``Aborted``, ``Timeout``, ``Overflow1``, etc.
 - ``ImageData`` changed to get bits {0,1}, not booleans as previously
-- Add tokenizer symbols for ``<->`` and ``->`` and the unicode versions of those
+- Add tokenizer symbols for ``<->`` and ``->`` and the Unicode versions of those
 - Small corrections to ``Needs``, e.g check if already loaded, correct a typo, etc.
 - ``System`$InputFileName`` is now set inside ``Needs`` and ``Get``
 - Install shell scripts ``dmathicserver``, ``dmathicsscript``, and ``dmathics`` to simplify running docker
@@ -368,7 +537,7 @@ Enhancements and bug fixes
 - proper sympolic expantion for ``Re`` and ``Im``
 - fixes a bug in the evaluation of ``SympyPrime`` #827
 - clean up ``ColorData``
-- fixes unicode characters in TeX document
+- fixes Unicode characters in TeX document
 - update Django gallery examples
 - fixes ``Sum`` and ``Product`` #869, #873
 - warn when using options not supported by a Builtin #898, #645

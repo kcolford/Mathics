@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 
 """
-Patterns and Rules
+Rules and Patterns
+
+The concept of transformation rules for arbitrary symbolic patterns is key in Mathics.
+
+Also, functions can get applied or transformed depending on whether or not functions arguments match.
 
 Some examples:
 >> a + b + c /. a + b -> t
@@ -45,7 +49,9 @@ from mathics.core.expression import (
     Integer,
     Rational,
     Real,
+    SymbolFalse,
     SymbolList,
+    SymbolTrue,
 )
 from mathics.core.rules import Rule
 from mathics.core.pattern import Pattern, StopGenerator
@@ -451,6 +457,9 @@ class PatternTest(BinaryOperator, PatternObject):
      = True
     >> MatchQ[-3, _Integer?(#>0&)]
      = False
+    >> MatchQ[3, Pattern[3]]
+     : First element in pattern Pattern[3] is not a valid pattern name.
+     = False
     """
 
     operator = "?"
@@ -630,7 +639,10 @@ class _StopGeneratorMatchQ(StopGenerator):
 
 class Matcher(object):
     def __init__(self, form):
-        self.form = Pattern.create(form)
+        if isinstance(form, Pattern):
+            self.form = form
+        else:
+            self.form = Pattern.create(form)
 
     def match(self, expr, evaluation):
         def yield_func(vars, rest):
@@ -660,6 +672,9 @@ class MatchQ(Builtin):
      = False
     >> MatchQ[_Integer][123]
      = True
+    >> MatchQ[3, Pattern[3]]
+     : First element in pattern Pattern[3] is not a valid pattern name.
+     = False
     """
 
     rules = {"MatchQ[form_][expr_]": "MatchQ[expr, form]"}
@@ -667,9 +682,13 @@ class MatchQ(Builtin):
     def apply(self, expr, form, evaluation):
         "MatchQ[expr_, form_]"
 
-        if match(expr, form, evaluation):
-            return Symbol("True")
-        return Symbol("False")
+        try:
+            if match(expr, form, evaluation):
+                return SymbolTrue
+            return SymbolFalse
+        except PatternError as e:
+            evaluation.message(e.name, e.tag, *(e.args))
+            return SymbolFalse
 
 
 class Verbatim(PatternObject):
@@ -786,6 +805,7 @@ class Pattern_(PatternObject):
         "nodef": (
             "No default setting found for `1` in " "position `2` when length is `3`."
         ),
+        "argr": "Pattern called with 1 argument; 2 arguments are expected.",
     }
 
     rules = {
@@ -801,10 +821,13 @@ class Pattern_(PatternObject):
     }
 
     def init(self, expr):
-        super(Pattern_, self).init(expr)
-        self.varname = expr.leaves[0].get_name()
-        if self.varname is None:
+        if len(expr.leaves) != 2:
             self.error("patvar", expr)
+        varname = expr.leaves[0].get_name()
+        if varname is None or varname == "":
+            self.error("patvar", expr)
+        super(Pattern_, self).init(expr)
+        self.varname = varname
         self.pattern = Pattern.create(expr.leaves[1])
 
     def __repr__(self):

@@ -130,7 +130,12 @@ def from_python(arg):
         #     return Symbol(arg)
     elif isinstance(arg, dict):
         entries = [
-            Expression("Rule", from_python(key), from_python(arg[key]),) for key in arg
+            Expression(
+                "Rule",
+                from_python(key),
+                from_python(arg[key]),
+            )
+            for key in arg
         ]
         return Expression(SymbolList, *entries)
     elif isinstance(arg, BaseExpression):
@@ -304,7 +309,7 @@ class BaseExpression(KeyComparable):
         return []
 
     def get_name(self):
-        " Returns symbol's name if Symbol instance "
+        "Returns symbol's name if Symbol instance"
 
         return ""
 
@@ -315,7 +320,7 @@ class BaseExpression(KeyComparable):
         return False
 
     def get_lookup_name(self):
-        " Returns symbol name of leftmost head "
+        "Returns symbol name of leftmost head"
 
         return self.get_name()
 
@@ -345,6 +350,9 @@ class BaseExpression(KeyComparable):
 
     def is_numeric(self) -> bool:
         # used by NumericQ and expression ordering
+        return False
+
+    def has_form(self, heads, *leaf_counts):
         return False
 
     def flatten(self, head, pattern_only=False, callback=None) -> "BaseExpression":
@@ -559,7 +567,7 @@ class BaseExpression(KeyComparable):
     def get_rules_list(self):
         from mathics.core.rules import Rule
 
-        list_expr = self.flatten(Symbol("List"))
+        list_expr = self.flatten(SymbolList)
         list = []
         if list_expr.has_form("List", None):
             list.extend(list_expr.leaves)
@@ -1335,7 +1343,7 @@ class Expression(BaseExpression):
         return expr
 
     def evaluate_next(self, evaluation) -> typing.Tuple["Expression", bool]:
-        from mathics.builtin import BoxConstruct
+        from mathics.builtin.base import BoxConstruct
 
         head = self._head.evaluate(evaluation)
         attributes = head.get_attributes(evaluation.definitions)
@@ -1513,6 +1521,10 @@ class Expression(BaseExpression):
             )
         elif self.has_form("SuperscriptBox", 2):
             return "^".join([leaf.boxes_to_text(**options) for leaf in self._leaves])
+        elif self.has_form("FractionBox", 2):
+            return "/".join(
+                [" ( " + leaf.boxes_to_text(**options) + " ) " for leaf in self._leaves]
+            )
         else:
             raise BoxError(self, "text")
 
@@ -1655,7 +1667,7 @@ class Expression(BaseExpression):
         )
 
     def sort(self, pattern=False):
-        " Sort the leaves according to internal ordering. "
+        "Sort the leaves according to internal ordering."
         leaves = list(self._leaves)
         if pattern:
             leaves.sort(key=lambda e: e.get_sort_key(pattern_sort=True))
@@ -1824,17 +1836,21 @@ class Expression(BaseExpression):
             return True, Expression(head, *leaves)
 
     def is_numeric(self) -> bool:
-        return self._head.get_name() in system_symbols(
-            "Sqrt",
-            "Times",
-            "Plus",
-            "Subtract",
-            "Minus",
-            "Power",
-            "Abs",
-            "Divide",
-            "Sin",
-        ) and all(leaf.is_numeric() for leaf in self._leaves)
+        return (
+            self._head.get_name()
+            in system_symbols(
+                "Sqrt",
+                "Times",
+                "Plus",
+                "Subtract",
+                "Minus",
+                "Power",
+                "Abs",
+                "Divide",
+                "Sin",
+            )
+            and all(leaf.is_numeric() for leaf in self._leaves)
+        )
         # TODO: complete list of numeric functions, or access NumericFunction
         # attribute
 
@@ -2032,7 +2048,7 @@ class Symbol(Atom):
             ]
 
     def equal2(self, rhs: Any) -> Optional[bool]:
-        """Mathics two-argument Equal (==) """
+        """Mathics two-argument Equal (==)"""
         if self.sameQ(rhs):
             return True
 
@@ -2257,6 +2273,7 @@ class Integer(Number):
         return self.value == 0
 
 
+Integer0 = Integer(0)
 Integer1 = Integer(1)
 
 
@@ -2352,6 +2369,9 @@ class Rational(Number):
         return (
             self.numerator().is_zero
         )  # (implicit) and not (self.denominator().is_zero)
+
+
+RationalOneHalf = Rational(1, 2)
 
 
 class Real(Number):
@@ -2587,7 +2607,7 @@ class Complex(Number):
         if isinstance(imag, Complex) or not isinstance(imag, Number):
             raise ValueError("Argument 'imag' must be a real number.")
 
-        if imag.sameQ(Integer(0)):
+        if imag.sameQ(Integer0):
             return real
 
         if isinstance(real, MachineReal) and not isinstance(imag, MachineReal):
@@ -2609,7 +2629,9 @@ class Complex(Number):
         return self.real.to_sympy() + sympy.I * self.imag.to_sympy()
 
     def to_python(self, *args, **kwargs):
-        return complex(self.real.to_python(), self.imag.to_python())
+        return complex(
+            self.real.to_python(*args, **kwargs), self.imag.to_python(*args, **kwargs)
+        )
 
     def to_mpmath(self):
         return mpmath.mpc(self.real.to_mpmath(), self.imag.to_mpmath())
@@ -2954,7 +2976,10 @@ class String(Atom):
         return None
 
     def to_python(self, *args, **kwargs) -> str:
-        return '"%s"' % self.value  # add quotes to distinguish from Symbols
+        if kwargs.get("string_quotes", True):
+            return '"%s"' % self.value  # add quotes to distinguish from Symbols
+        else:
+            return self.value
 
     def __hash__(self):
         return hash(("String", self.value))

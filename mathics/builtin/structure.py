@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+"""
+Structural Operations
+"""
 
 from mathics.version import __version__  # noqa used in loading to check consistency.
 from mathics.builtin.base import (
@@ -18,10 +21,12 @@ from mathics.core.expression import (
     SymbolTrue,
     SymbolList,
     Integer,
+    Integer0,
+    Integer1,
     Rational,
     strip_context,
 )
-from mathics.core.rules import Pattern, Rule
+from mathics.core.rules import Pattern
 
 from mathics.builtin.lists import (
     python_levelspec,
@@ -29,7 +34,6 @@ from mathics.builtin.lists import (
     InvalidLevelspecError,
     List,
 )
-from mathics.builtin.functional import Identity
 
 import platform
 
@@ -44,10 +48,11 @@ else:
 class Sort(Builtin):
     """
     <dl>
-    <dt>'Sort[$list$]'
-    <dd>sorts $list$ (or the leaves of any other expression) according to canonical ordering.
-    <dt>'Sort[$list$, $p$]'
-    <dd>sorts using $p$ to determine the order of two elements.
+      <dt>'Sort[$list$]'
+      <dd>sorts $list$ (or the leaves of any other expression) according to canonical ordering.
+
+      <dt>'Sort[$list$, $p$]'
+      <dd>sorts using $p$ to determine the order of two elements.
     </dl>
 
     >> Sort[{4, 1.0, a, 3+I}]
@@ -68,21 +73,6 @@ class Sort(Builtin):
 
     #> Sort[{x_, y_}, PatternsOrderedQ]
      = {x_, y_}
-
-    ## Test ordering of monomials:
-    #> a^2f+a b f
-     = a ^ 2 f + a b f
-    #> a^4 b^2 + e^3 b
-     = a ^ 4 b ^ 2 + b e ^ 3
-    #> Expand[(1+x)^3 y]
-     = y + 3 x y + 3 x ^ 2 y + x ^ 3 y
-    #> Expand[(x+y)^3]
-     = x ^ 3 + 3 x ^ 2 y + 3 x y ^ 2 + y ^ 3
-    #> y+x y^(1/2)
-     = x Sqrt[y] + y
-    ## Numeric parts:
-    #> 1+Pi+Pi^2+Sin[9/4*Pi]+x+x^2+Sin[x+x^2]
-     = 1 + Pi + Pi ^ 2 + Sqrt[2] / 2 + x + x ^ 2 + Sin[x + x ^ 2]
     """
 
     def apply(self, list, evaluation):
@@ -345,11 +335,11 @@ class Order(Builtin):
     def apply(self, x, y, evaluation):
         "Order[x_, y_]"
         if x < y:
-            return Integer(1)
+            return Integer1
         elif x > y:
             return Integer(-1)
         else:
-            return Integer(0)
+            return Integer0
 
 
 class Head(Builtin):
@@ -946,18 +936,6 @@ class Flatten(Builtin):
     >> Flatten[{{1, 2, 3}, {4}, {6, 7}, {8, 9, 10}}, {{2}, {1}}]
      = {{1, 4, 6, 8}, {2, 7, 9}, {3, 10}}
 
-    #> Flatten[{{{111, 112, 113}, {121, 122}}, {{211, 212}, {221, 222, 223}}}, {{3}, {1}, {2}}]
-     = {{{111, 121}, {211, 221}}, {{112, 122}, {212, 222}}, {{113}, {223}}}
-
-    #> Flatten[{{{1, 2, 3}, {4, 5}}, {{6, 7}, {8, 9,  10}}}, {{3}, {1}, {2}}]
-     = {{{1, 4}, {6, 8}}, {{2, 5}, {7, 9}}, {{3}, {10}}}
-
-    #> Flatten[{{{1, 2, 3}, {4, 5}}, {{6, 7}, {8, 9, 10}}}, {{2}, {1, 3}}]
-     = {{1, 2, 3, 6, 7}, {4, 5, 8, 9, 10}}
-
-    #> Flatten[{{1, 2}, {3,4}}, {1, 2}]
-     = {1, 2, 3, 4}
-
     #> Flatten[{{1, 2}, {3, 4}}, {{-1, 2}}]
      : Levels to be flattened together in {{-1, 2}} should be lists of positive integers.
      = Flatten[{{1, 2}, {3, 4}}, {{-1, 2}}, List]
@@ -968,29 +946,15 @@ class Flatten(Builtin):
 
     ## Check `n` completion
     #> m = {{{1, 2}, {3}}, {{4}, {5, 6}}};
-    #> Flatten[m, {2}]
-     = {{{1, 2}, {4}}, {{3}, {5, 6}}}
-    #> Flatten[m, {{2}}]
-     = {{{1, 2}, {4}}, {{3}, {5, 6}}}
-    #> Flatten[m, {{2}, {1}}]
-     = {{{1, 2}, {4}}, {{3}, {5, 6}}}
-    #> Flatten[m, {{2}, {1}, {3}}]
-     = {{{1, 2}, {4}}, {{3}, {5, 6}}}
     #> Flatten[m, {{2}, {1}, {3}, {4}}]
      : Level 4 specified in {{2}, {1}, {3}, {4}} exceeds the levels, 3, which can be flattened together in {{{1, 2}, {3}}, {{4}, {5, 6}}}.
      = Flatten[{{{1, 2}, {3}}, {{4}, {5, 6}}}, {{2}, {1}, {3}, {4}}, List]
 
-    ## #251 tests
+    ## Test from issue #251
     #> m = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-    #> Flatten[m, {1}]
-     = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}
-    #> Flatten[m, {2}]
-     = {{1, 4, 7}, {2, 5, 8}, {3, 6, 9}}
     #> Flatten[m, {3}]
      : Level 3 specified in {3} exceeds the levels, 2, which can be flattened together in {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}.
      = Flatten[{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}, {3}, List]
-    #> Flatten[m, {2, 1}]
-     = {1, 4, 7, 2, 5, 8, 3, 6, 9}
 
     ## Reproduce strange head behaviour
     #> Flatten[{{1}, 2}, {1, 2}]
@@ -1000,16 +964,9 @@ class Flatten(Builtin):
      : Level 1 specified in {1, 2} exceeds the levels, 0, which can be flattened together in a[b[1, 2], b[3]].
      = Flatten[a[b[1, 2], b[3]], {1, 2}, b]
 
-    #> Flatten[{{1, 2}, {3, {4}}}, {{1, 2}}]
-     = {1, 2, 3, {4}}
     #> Flatten[{{1, 2}, {3, {4}}}, {{1, 2, 3}}]
      : Level 3 specified in {{1, 2, 3}} exceeds the levels, 2, which can be flattened together in {{1, 2}, {3, {4}}}.
      = Flatten[{{1, 2}, {3, {4}}}, {{1, 2, 3}}, List]
-
-    #> Flatten[p[1, p[2], p[3]]]
-     = p[1, 2, 3]
-    #> Flatten[p[1, p[2], p[3]], 2]
-     = p[1, 2, 3]
     """
 
     rules = {
@@ -1314,20 +1271,6 @@ class Operate(Builtin):
     >> Operate[p, f[a][b][c], 0]
      = p[f[a][b][c]]
 
-    #> Operate[p, f[a][b][c]]
-     = p[f[a][b]][c]
-    #> Operate[p, f[a][b][c], 1]
-     = p[f[a][b]][c]
-    #> Operate[p, f[a][b][c], 2]
-     = p[f[a]][b][c]
-    #> Operate[p, f[a][b][c], 3]
-     = p[f][a][b][c]
-    #> Operate[p, f[a][b][c], 4]
-     = f[a][b][c]
-    #> Operate[p, f]
-     = f
-    #> Operate[p, f, 0]
-     = p[f]
     #> Operate[p, f, -1]
      : Non-negative integer expected at position 3 in Operate[p, f, -1].
      = Operate[p, f, -1]
@@ -1382,15 +1325,6 @@ class Through(Builtin):
      = f[g[x]]
     >> Through[p[f, g][x]]
      = p[f[x], g[x]]
-
-    #> Through[p[f, g][x, y]]
-     = p[f[x, y], g[x, y]]
-    #> Through[p[f, g][]]
-     = p[f[], g[]]
-    #> Through[p[f, g]]
-     = Through[p[f, g]]
-    #> Through[f[][x]]
-     = f[]
     """
 
     def apply(self, p, args, x, evaluation):

@@ -2,12 +2,25 @@
 
 """
 Tensors
+
+In mathematics, a tensor is an algebraic object that describes a (multilinear) relationship between sets of algebraic objects related to a vector space. Objects that tensors may map between include vectors and scalars, and even other tensors.
+
+There are many types of tensors, including scalars and vectors (which are the simplest tensors), dual vectors, multilinear maps between vector spaces, and even some operations such as the dot product. Tensors are defined independent of any basis, although they are often referred to by their components in a basis related to a particular coordinate system.
+
+Mathics represents tensors of vectors and matrices as lists; tensors of any rank can be handled.
 """
 
 from mathics.version import __version__  # noqa used in loading to check consistency.
 
 from mathics.builtin.base import Builtin, BinaryOperator
-from mathics.core.expression import Expression, Integer, String, SymbolTrue, SymbolFalse
+from mathics.core.expression import (
+    Expression,
+    Integer,
+    Integer0,
+    String,
+    SymbolTrue,
+    SymbolFalse,
+)
 from mathics.core.rules import Pattern
 
 from mathics.builtin.lists import get_part
@@ -16,12 +29,14 @@ from mathics.builtin.lists import get_part
 class ArrayQ(Builtin):
     """
     <dl>
-    <dt>'ArrayQ[$expr$]'
-        <dd>tests whether $expr$ is a full array.
-    <dt>'ArrayQ[$expr$, $pattern$]'
-        <dd>also tests whether the array depth of $expr$ matches $pattern$.
-    <dt>'ArrayQ[$expr$, $pattern$, $test$]'</dt>
-        <dd>furthermore tests whether $test$ yields 'True' for all elements of $expr$.
+      <dt>'ArrayQ[$expr$]'
+      <dd>tests whether $expr$ is a full array.
+
+      <dt>'ArrayQ[$expr$, $pattern$]'
+      <dd>also tests whether the array depth of $expr$ matches $pattern$.
+
+      <dt>'ArrayQ[$expr$, $pattern$, $test$]'</dt>
+      <dd>furthermore tests whether $test$ yields 'True' for all elements of $expr$.
         'ArrayQ[$expr$]' is equivalent to 'ArrayQ[$expr$, _, True&]'.
     </dl>
 
@@ -434,7 +449,7 @@ class DiagonalMatrix(Builtin):
         result = []
         n = len(list.leaves)
         for index, item in enumerate(list.leaves):
-            row = [Integer(0)] * n
+            row = [Integer0] * n
             row[index] = item
             result.append(Expression("List", *row))
         return Expression("List", *result)
@@ -480,7 +495,7 @@ def get_default_distance(p):
     elif all(isinstance(q, String) for q in p):
         return "EditDistance"
     else:
-        from mathics.builtin.graphics import expression_to_color
+        from mathics.builtin.colors.color_directives import expression_to_color
 
         if all(expression_to_color(q) is not None for q in p):
             return "ColorDistance"

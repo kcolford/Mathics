@@ -50,6 +50,7 @@ using SymPy {sympy}, mpmath {mpmath}, numpy {numpy}""".format(
 if "cython" in version_info:
     version_string += f", cython {version_info['cython']}"
 
+
 license_string = """\
 Copyright (C) 2011-2021 The Mathics Team.
 This program comes with ABSOLUTELY NO WARRANTY.

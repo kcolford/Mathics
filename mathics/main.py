@@ -8,13 +8,19 @@ import re
 import subprocess
 import sys
 
+import os.path as osp
 from mathics.core.parser import MathicsFileLineFeeder, MathicsLineFeeder
 
-from mathics.core.definitions import Definitions, Symbol
+from mathics.core.definitions import autoload_files, Definitions, Symbol
 from mathics.core.expression import strip_context
 from mathics.core.evaluation import Evaluation, Output
 from mathics import version_string, license_string, __version__
 from mathics import settings
+
+
+def get_srcdir():
+    filename = osp.normcase(osp.dirname(osp.abspath(__file__)))
+    return osp.realpath(filename)
 
 
 class TerminalShell(MathicsLineFeeder):
@@ -82,6 +88,7 @@ class TerminalShell(MathicsLineFeeder):
 
         self.incolors, self.outcolors = term_colors
         self.definitions = definitions
+        autoload_files(definitions, get_srcdir(), "autoload-cli")
 
     def get_last_line_number(self):
         return self.definitions.get_line_no()
@@ -110,11 +117,30 @@ class TerminalShell(MathicsLineFeeder):
             return self.rl_read_line(prompt)
         return input(prompt)
 
-    def print_result(self, result, no_out_prompt=False):
-        if result is not None and result.result is not None:
-            output = self.to_output(str(result.result))
-            mess = self.get_out_prompt() if not no_out_prompt else ""
-            print(mess + output + "\n")
+    def print_result(self, result, no_out_prompt=False, strict_wl_output=False):
+        if result is None:
+            # FIXME decide what to do here
+            return
+
+        last_eval = result.last_eval
+
+        eval_type = None
+        if last_eval is not None:
+            try:
+                eval_type = last_eval.get_head_name()
+            except:
+                print(sys.exc_info()[1])
+                return
+
+        out_str = str(result.result)
+        if eval_type == "System`String" and not strict_wl_output:
+            out_str = '"' + out_str.replace('"', r"\"") + '"'
+        if eval_type == "System`Graph":
+            out_str = "-Graph-"
+
+        output = self.to_output(out_str)
+        mess = self.get_out_prompt() if not no_out_prompt else ""
+        print(mess + output + "\n")
 
     def rl_read_line(self, prompt):
         # Wrap ANSI colour sequences in \001 and \002, so readline
@@ -186,10 +212,9 @@ def main() -> int:
         prog="mathics",
         usage="%(prog)s [options] [FILE]",
         add_help=False,
-        description="Mathics is a general-purpose computer algebra system.",
-        epilog="""Please feel encouraged to contribute to Mathics! Create
-            your own fork, make the desired changes, commit, and make a pull
-            request.""",
+        description="A simple command-line interface to Mathics",
+        epilog="""For a more extensive command-line interface see "mathicsscript".
+Please contribute to Mathics!""",
     )
 
     argparser.add_argument(
@@ -269,6 +294,12 @@ def main() -> int:
         "--version", "-v", action="version", version="%(prog)s " + __version__
     )
 
+    argparser.add_argument(
+        "--strict-wl-output",
+        help="Most WL-output compatible (at the expense of useability).",
+        action="store_true",
+    )
+
     args, script_args = argparser.parse_known_args()
 
     quit_command = "CTRL-BREAK" if sys.platform == "win32" else "CONTROL-D"
@@ -310,23 +341,6 @@ def main() -> int:
 
         definitions.set_line_no(0)
 
-    if args.execute:
-        for expr in args.execute:
-            evaluation = Evaluation(shell.definitions, output=TerminalOutput(shell))
-            result = evaluation.parse_evaluate(expr, timeout=settings.TIMEOUT)
-            shell.print_result(result, no_out_prompt=True)
-            if evaluation.exc_result == Symbol("Null"):
-                exit_rc = 0
-            elif evaluation.exc_result == Symbol("$Aborted"):
-                exit_rc = -1
-            elif evaluation.exc_result == Symbol("Overflow"):
-                exit_rc = -2
-            else:
-                exit_rc = -3
-
-        if not args.persist:
-            return exit_rc
-
     if args.FILE is not None:
         feeder = MathicsFileLineFeeder(args.FILE)
         try:
@@ -345,7 +359,26 @@ def main() -> int:
 
         if args.persist:
             definitions.set_line_no(0)
-        else:
+        elif not args.execute:
+            return exit_rc
+
+    if args.execute:
+        for expr in args.execute:
+            evaluation = Evaluation(shell.definitions, output=TerminalOutput(shell))
+            result = evaluation.parse_evaluate(expr, timeout=settings.TIMEOUT)
+            shell.print_result(
+                result, no_out_prompt=True, strict_wl_output=args.strict_wl_output
+            )
+            if evaluation.exc_result == Symbol("Null"):
+                exit_rc = 0
+            elif evaluation.exc_result == Symbol("$Aborted"):
+                exit_rc = -1
+            elif evaluation.exc_result == Symbol("Overflow"):
+                exit_rc = -2
+            else:
+                exit_rc = -3
+
+        if not args.persist:
             return exit_rc
 
     if not args.quiet:
@@ -368,7 +401,7 @@ def main() -> int:
                 print(query)
             result = evaluation.evaluate(query, timeout=settings.TIMEOUT)
             if result is not None:
-                shell.print_result(result)
+                shell.print_result(result, strict_wl_output=args.strict_wl_output)
         except (KeyboardInterrupt):
             print("\nKeyboardInterrupt")
         except EOFError:

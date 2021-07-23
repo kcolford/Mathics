@@ -1,14 +1,15 @@
 # cython: language_level=3
 # -*- coding: utf-8 -*-
 
+# Note: docstring is flowed in documentation. Line breaks in the docstring will appear in the
+# printed output, so be carful not to add then mid-sentence.
 
 """
-Numeric Evaluation
+Numeric Evaluation and Precision
 
-Support for numeric evaluation with arbitrary precision is just a
-proof-of-concept.
-Precision is not "guarded" through the evaluation process. Only
-integer precision is supported.
+Support for numeric evaluation with arbitrary precision is just a proof-of-concept.
+
+Precision is not "guarded" through the evaluation process. Only integer precision is supported.
 However, things like 'N[Pi, 100]' should work as expected.
 """
 from mathics.version import __version__  # noqa used in loading to check consistency.
@@ -37,6 +38,7 @@ from mathics.core.expression import (
     Complex,
     Expression,
     Integer,
+    Integer0,
     MachineReal,
     Number,
     Rational,
@@ -143,55 +145,17 @@ class N(Builtin):
      = 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117068
     #> ToString[p]
      = 3.141592653589793238462643383279502884197169399375105820974944592307816406286208998628034825342117068
-    #> 3.14159 * "a string"
-     = 3.14159 a string
 
-    #> N[Pi, Pi]
-     = 3.14
-
-    #> N[1/9, 30]
-     = 0.111111111111111111111111111111
-    #> Precision[%]
-     = 30.
-
-    #> N[1.5, 30]
-     = 1.5
-    #> Precision[%]
-     = MachinePrecision
-    #> N[1.5, 5]
-     = 1.5
-    #> Precision[%]
-     = MachinePrecision
-
-    #> {N[x], N[x, 30], N["abc"], N["abc", 30]}
-     = {x, x, abc, abc}
+    #> N[1.012345678901234567890123, 20]
+     = 1.0123456789012345679
 
     #> N[I, 30]
      = 1.00000000000000000000000000000 I
 
-    #> N[1.01234567890123456789]
-     = 1.01235
-    #> N[1.012345678901234567890123, 20]
-     = 1.0123456789012345679
-    #> N[1.012345678901234567890123, 5]
-     = 1.0123
-    #> % // Precision
-     = 5.
     #> N[1.012345678901234567890123, 50]
      = 1.01234567890123456789012
     #> % // Precision
      = 24.
-
-    #> N[1.01234567890123456789`]
-     = 1.01235
-    #> N[1.01234567890123456789`, 20]
-     = 1.01235
-    #> % // Precision
-     = MachinePrecision
-    #> N[1.01234567890123456789`, 2]
-     = 1.01235
-    #> % // Precision
-     = MachinePrecision
     """
 
     messages = {
@@ -1143,13 +1107,13 @@ class Rationalize(Builtin):
 def chop(expr, delta=10.0 ** (-10.0)):
     if isinstance(expr, Real):
         if -delta < expr.get_float_value() < delta:
-            return Integer(0)
+            return Integer0
     elif isinstance(expr, Complex) and expr.is_inexact():
         real, imag = expr.real, expr.imag
         if -delta < real.get_float_value() < delta:
-            real = Integer(0)
+            real = Integer0
         if -delta < imag.get_float_value() < delta:
-            imag = Integer(0)
+            imag = Integer0
         return Complex(real, imag)
     elif isinstance(expr, Expression):
         return Expression(chop(expr.head), *[chop(leaf) for leaf in expr.leaves])
@@ -1224,11 +1188,9 @@ class NumericQ(Builtin):
 
 
 class RealValuedNumericQ(Builtin):
-    """
-    #> Internal`RealValuedNumericQ /@ {1, N[Pi], 1/2, Sin[1.], Pi, 3/4, aa,  I}
-     = {True, True, True, True, True, True, False, False}
-    """
-
+    # No docstring since this is internal and it will mess up documentation.
+    # FIXME: Perhaps in future we will have a more explicite way to indicate not
+    # to add something to the docs.
     context = "Internal`"
 
     rules = {
@@ -1237,11 +1199,9 @@ class RealValuedNumericQ(Builtin):
 
 
 class RealValuedNumberQ(Builtin):
-    """
-    #>  Internal`RealValuedNumberQ /@ {1, N[Pi], 1/2, Sin[1.], Pi, 3/4, aa, I}
-     = {True, True, True, True, False, True, False, False}
-    """
-
+    # No docstring since this is internal and it will mess up documentation.
+    # FIXME: Perhaps in future we will have a more explicite way to indicate not
+    # to add something to the docs.
     context = "Internal`"
 
     rules = {
@@ -1435,14 +1395,21 @@ class RealDigits(Builtin):
     >> RealDigits[123.55555]
      = {{1, 2, 3, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0}, 3}
 
-    >> RealDigits[0.000012355555]
-     = {{1, 2, 3, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0}, -4}
+    Return an explicit recurring decimal form:
+    >> RealDigits[19 / 7]
+     = {{2, {7, 1, 4, 2, 8, 5}}, 1}
 
-    >> RealDigits[-123.55555]
-     = {{1, 2, 3, 5, 5, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0}, 3}
+    The 10000th digit of  is an 8:
+    >> RealDigits[Pi, 10, 1, -10000]
+    = {{8}, -9999}
 
-    #> RealDigits[0.004]
-     = {{4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, -2}
+    20 digits starting with the coefficient of 10^-5:
+    >> RealDigits[Pi, 10, 20, -5]
+     = {{9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3, 2, 3, 8, 4, 6, 2, 6, 4, 3}, -4}
+
+    RealDigits gives Indeterminate if more digits than the precision are requested:
+    >> RealDigits[123.45, 10, 18]
+     = {{1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Indeterminate, Indeterminate}, 3}
 
     #> RealDigits[-1.25, -1]
      : Base -1 is not a real number greater than 1.
@@ -1452,77 +1419,22 @@ class RealDigits(Builtin):
     >> RealDigits[Pi, 10, 25]
      = {{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3, 2, 3, 8, 4, 6, 2, 6, 4, 3}, 1}
 
-    #> RealDigits[19 / 7, 10, 25]
-     = {{2, 7, 1, 4, 2, 8, 5, 7, 1, 4, 2, 8, 5, 7, 1, 4, 2, 8, 5, 7, 1, 4, 2, 8, 5}, 1}
+    #> RealDigits[-Pi]
+     : The number of digits to return cannot be determined.
+     = RealDigits[-Pi]
 
-    Return an explicit recurring decimal form:
-    >> RealDigits[19 / 7]
-     = {{2, {7, 1, 4, 2, 8, 5}}, 1}
-
-    #> RealDigits[100 / 21]
-     = {{{4, 7, 6, 1, 9, 0}}, 1}
-
-    #> RealDigits[1.234, 2, 15]
-     = {{1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0, 1}, 1}
-
-    20 digits starting with the coefficient of 10^-5:
-    >> RealDigits[Pi, 10, 20, -5]
-     = {{9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3, 2, 3, 8, 4, 6, 2, 6, 4, 3}, -4}
-
-    #> RealDigits[Pi, 10, 20, 5]
-     = {{0, 0, 0, 0, 0, 3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5, 8, 9, 7, 9}, 6}
-
-    The 10000th digit of  is an 8:
-    >> RealDigits[Pi, 10, 1, -10000]
-     = {{8}, -9999}
+    #> RealDigits[I, 7]
+     : The value I is not a real number.
+    = RealDigits[I, 7]
 
     #> RealDigits[Pi]
      : The number of digits to return cannot be determined.
      = RealDigits[Pi]
 
-    #> RealDigits[20 / 3]
-     = {{{6}}, 1}
-
-    #> RealDigits[3 / 4]
-     = {{7, 5}, 0}
-
-    #> RealDigits[23 / 4]
-     = {{5, 7, 5}, 1}
-
     #> RealDigits[3 + 4 I]
      : The value 3 + 4 I is not a real number.
      = RealDigits[3 + 4 I]
 
-    #> RealDigits[abc]
-     = RealDigits[abc]
-
-    #> RealDigits[abc, 2]
-     = RealDigits[abc, 2]
-
-    #> RealDigits[45]
-     = {{4, 5}, 2}
-
-    #> RealDigits[{3.14, 4.5}]
-     = {{{3, 1, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 1}, {{4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 1}}
-
-    #> RealDigits[123.45, 40]
-     = {{3, 3, 18, 0, 0, 0, 0, 0, 0, 0}, 2}
-
-    #> RealDigits[0.00012345, 2]
-     = {{1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0}, -12}
-
-    #> RealDigits[12345, 2, 4]
-     = {{1, 1, 0, 0}, 14}
-
-    #> RealDigits[123.45, 2, 15]
-     = {{1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1}, 7}
-
-    RealDigits gives Indeterminate if more digits than the precision are requested:
-    >> RealDigits[123.45, 10, 18]
-     = {{1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, Indeterminate, Indeterminate}, 3}
-
-    #> RealDigits[0.000012345, 2]
-     = {{1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1}, -16}
 
     #> RealDigits[3.14, 10, 1.5]
      : Non-negative machine-sized integer expected at position 3 in RealDigits[3.14, 10, 1.5].
@@ -1531,77 +1443,6 @@ class RealDigits(Builtin):
     #> RealDigits[3.14, 10, 1, 1.5]
      : Machine-sized integer expected at position 4 in RealDigits[3.14, 10, 1, 1.5].
      = RealDigits[3.14, 10, 1, 1.5]
-
-    #> RealDigits[Pi, 10, 20, -5]
-     = {{9, 2, 6, 5, 3, 5, 8, 9, 7, 9, 3, 2, 3, 8, 4, 6, 2, 6, 4, 3}, -4}
-
-    #> RealDigits[305.0123, 10, 17, 0]
-     = {{5, 0, 1, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, Indeterminate, Indeterminate, Indeterminate}, 1}
-
-    #> RealDigits[220, 140]
-     = {{1, 80}, 2}
-
-    # #> RealDigits[Sqrt[3], 10, 50]
-    # = {{1, 7, 3, 2, 0, 5, 0, 8, 0, 7, 5, 6, 8, 8, 7, 7, 2, 9, 3, 5, 2, 7, 4, 4, 6, 3, 4, 1, 5, 0, 5, 8, 7, 2, 3, 6, 6, 9, 4, 2, 8, 0, 5, 2, 5, 3, 8, 1, 0, 3}, 1}
-
-    #> RealDigits[0]
-     = {{0}, 1}
-
-    #> RealDigits[1]
-     = {{1}, 1}
-
-    #> RealDigits[0, 10, 5]
-     = {{0, 0, 0, 0, 0}, 0}
-
-    #> RealDigits[11/23]
-     = {{{4, 7, 8, 2, 6, 0, 8, 6, 9, 5, 6, 5, 2, 1, 7, 3, 9, 1, 3, 0, 4, 3}}, 0}
-
-    #> RealDigits[1/97]
-     = {{{1, 0, 3, 0, 9, 2, 7, 8, 3, 5, 0, 5, 1, 5, 4, 6, 3, 9, 1, 7, 5, 2, 5, 7, 7, 3, 1, 9, 5, 8, 7, 6, 2, 8, 8, 6, 5, 9, 7, 9, 3, 8, 1, 4, 4, 3, 2, 9, 8, 9, 6, 9, 0, 7, 2, 1, 6, 4, 9, 4, 8, 4, 5, 3, 6, 0, 8, 2, 4, 7, 4, 2, 2, 6, 8, 0, 4, 1, 2, 3, 7, 1, 1, 3, 4, 0, 2, 0, 6, 1, 8, 5, 5, 6, 7, 0}}, -1}
-
-    #> RealDigits[1/97, 2]
-     = {{{1, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0}}, -6}
-
-    #> RealDigits[1/197, 260, 5]
-     = {{1, 83, 38, 71, 69}, 0}
-
-    #> RealDigits[1/197, 260, 5, -6]
-     = {{246, 208, 137, 67, 80}, -5}
-
-    #> RealDigits[Pi, 260, 20]
-     = {{3, 36, 211, 172, 124, 173, 210, 42, 162, 76, 23, 206, 122, 187, 23, 245, 241, 225, 254, 98}, 1}
-
-    #> RealDigits[Pi, 260, 5]
-     = {{3, 36, 211, 172, 124}, 1}
-
-    #> RealDigits[1/3]
-     = {{{3}}, 0}
-
-    #> RealDigits[1/2, 7]
-     = {{{3}}, 0}
-
-    #> RealDigits[3/2, 7]
-     = {{1, {3}}, 1}
-
-    #> RealDigits[-3/2, 7]
-     = {{1, {3}}, 1}
-
-    #> RealDigits[3/2, 6]
-     = {{1, 3}, 1}
-
-    #> RealDigits[1, 7, 5]
-     = {{1, 0, 0, 0, 0}, 1}
-
-    #> RealDigits[I, 7]
-     : The value I is not a real number.
-     = RealDigits[I, 7]
-
-    #> RealDigits[-Pi]
-     : The number of digits to return cannot be determined.
-     = RealDigits[-Pi]
-
-    #> RealDigits[Round[x + y]]
-     = RealDigits[Round[x + y]]
 
     """
 
@@ -1892,10 +1733,17 @@ class Fold(object):
     SYMBOLIC = 2
 
     math = {
-        FLOAT: ComputationFunctions(cos=math.cos, sin=math.sin,),
-        MPMATH: ComputationFunctions(cos=mpmath.cos, sin=mpmath.sin,),
+        FLOAT: ComputationFunctions(
+            cos=math.cos,
+            sin=math.sin,
+        ),
+        MPMATH: ComputationFunctions(
+            cos=mpmath.cos,
+            sin=mpmath.sin,
+        ),
         SYMBOLIC: ComputationFunctions(
-            cos=lambda x: Expression("Cos", x), sin=lambda x: Expression("Sin", x),
+            cos=lambda x: Expression("Cos", x),
+            sin=lambda x: Expression("Sin", x),
         ),
     }
 

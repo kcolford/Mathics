@@ -22,6 +22,7 @@ To get a full list of avaiable commands, read the output of:
 
 """
 
+import re
 import sys
 import os.path as osp
 import platform
@@ -45,16 +46,29 @@ def read(*rnames):
 # stores __version__ in the current namespace
 exec(compile(open("mathics/version.py").read(), "mathics/version.py", "exec"))
 
-# Get/set VERSION and long_description from files
 long_description = read("README.rst") + "\n"
 
 
 is_PyPy = platform.python_implementation() == "PyPy"
 
-INSTALL_REQUIRES = []
-DEPENDENCY_LINKS = [
-    "http://github.com/Mathics3/mathics-scanner/tarball/master#egg=Mathics_Scanner-1.0.0.dev"
-]
+INSTALL_REQUIRES = ["Mathics-Scanner >= 1.2.1,<1.3.0"]
+
+# stores __version__ in the current namespace
+exec(compile(open("mathics/version.py").read(), "mathics/version.py", "exec"))
+
+EXTRAS_REQUIRE = {}
+for kind in ("dev", "full"):
+    extras_require = []
+    requirements_file = f"requirements-{kind}.txt"
+    for line in open(requirements_file).read().split("\n"):
+        if line and not line.startswith("#"):
+            requires = re.sub(r"([^#]+)(\s*#.*$)?", r"\1", line)
+            extras_require.append(requires)
+    EXTRAS_REQUIRE[kind] = extras_require
+
+DEPENDENCY_LINKS = []
+#     "http://github.com/Mathics3/mathics-scanner/tarball/master#egg=Mathics_Scanner-1.0.0.dev"
+# ]
 
 try:
     if is_PyPy:
@@ -64,24 +78,34 @@ except ImportError:
     EXTENSIONS = []
     CMDCLASS = {}
 else:
-    EXTENSIONS = {
-        "core": ["expression", "numbers", "rules", "pattern"],
+    EXTENSIONS_DICT = {
+        "core": ("expression", "numbers", "rules", "pattern"),
         "builtin": ["arithmetic", "numeric", "patterns", "graphics"],
     }
     EXTENSIONS = [
         Extension(
             "mathics.%s.%s" % (parent, module), ["mathics/%s/%s.py" % (parent, module)]
         )
-        for parent, modules in EXTENSIONS.items()
+        for parent, modules in EXTENSIONS_DICT.items()
         for module in modules
     ]
+    # EXTENSIONS_SUBDIR_DICT = {
+    #     "builtin": [("numbers", "arithmetic"), ("numbers", "numeric"), ("drawing", "graphics")],
+    # }
+    # EXTENSIONS.append(
+    #     Extension(
+    #         "mathics.%s.%s.%s" % (parent, module[0], module[1]), ["mathics/%s/%s/%s.py" % (parent, module[0], module[1])]
+    #     )
+    #     for parent, modules in EXTENSIONS_SUBDIR_DICT.items()
+    #     for module in modules
+    # )
     CMDCLASS = {"build_ext": build_ext}
     INSTALL_REQUIRES += ["cython>=0.15.1"]
 
 # General Requirements
 INSTALL_REQUIRES += [
-    "Mathics_Scanner>=1.1.2,<1.2.0",
-    "sympy>=1.7, <= 1.8dev",
+    "Mathics_Scanner>=1.2.1,<1.3.0",
+    "sympy>=1.8, <= 1.9dev",
     "mpmath>=1.2.0",
     "numpy",
     "palettable",
@@ -89,8 +113,6 @@ INSTALL_REQUIRES += [
     "python-dateutil",
     "llvmlite",
     "requests",
-    "scikit-image",
-    "wordcloud",  # Used in builtin/image.py by WordCloud()
 ]
 
 
@@ -98,8 +120,6 @@ def subdirs(root, file="*.*", depth=10):
     for k in range(depth):
         yield root + "*/" * k + file
 
-
-mathjax_files = list(subdirs("media/js/mathjax/"))
 
 setup(
     name="Mathics3",
@@ -112,13 +132,28 @@ setup(
         "mathics.core",
         "mathics.core.parser",
         "mathics.builtin",
-        "mathics.builtin.pymimesniffer",
-        "mathics.builtin.numpy_utils",
-        "mathics.builtin.pympler",
+        "mathics.builtin.arithfns",
+        "mathics.builtin.box",
+        "mathics.builtin.colors",
         "mathics.builtin.compile",
+        "mathics.builtin.distance",
+        "mathics.builtin.drawing",
+        "mathics.builtin.list",
+        "mathics.builtin.fileformats",
+        "mathics.builtin.files_io",
+        "mathics.builtin.intfns",
+        "mathics.builtin.moments",
+        "mathics.builtin.numbers",
+        "mathics.builtin.numpy_utils",
+        "mathics.builtin.pymimesniffer",
+        "mathics.builtin.pympler",
+        "mathics.builtin.specialfns",
+        "mathics.builtin.string",
         "mathics.doc",
+        "mathics.format",
     ],
     install_requires=INSTALL_REQUIRES,
+    extras_require=EXTRAS_REQUIRE,
     dependency_links=DEPENDENCY_LINKS,
     package_data={
         "mathics": [
@@ -129,6 +164,7 @@ setup(
             "doc/xml/data",
             "doc/tex/data",
             "autoload/*.m",
+            "autoload-cli/*.m",
             "autoload/formats/*/Import.m",
             "autoload/formats/*/Export.m",
             "packages/*/*.m",

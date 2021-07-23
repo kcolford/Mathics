@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
-from .helper import session, check_evaluation
-
-import math
-import sympy
-import sys
-from mathics.core.definitions import Definitions
-from mathics.core.evaluation import Evaluation
-import pytest
+from .helper import check_evaluation
 
 
 def test_to_infinity():
@@ -26,6 +19,5 @@ def test_to_infinity():
             '"sympy.pi"',
             "Pi",
         ),
-
     ):
         check_evaluation(str_expr, str_expected, message)

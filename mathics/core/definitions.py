@@ -32,13 +32,37 @@ def get_file_time(file) -> float:
 
 
 def valuesname(name) -> str:
-    " 'NValues' -> 'n' "
+    "'NValues' -> 'n'"
 
     assert name.startswith("System`"), name
     if name == "System`Messages":
         return "messages"
     else:
         return name[7:-6].lower()
+
+
+def autoload_files(
+    defs, root_dir_path: str, autoload_dir: str, block_global_definitions: bool = True
+):
+    from mathics.core.evaluation import Evaluation
+
+    # Load symbols from the autoload folder
+    for root, dirs, files in os.walk(os.path.join(root_dir_path, autoload_dir)):
+        for path in [os.path.join(root, f) for f in files if f.endswith(".m")]:
+            Expression("Get", String(path)).evaluate(Evaluation(defs))
+
+    if block_global_definitions:
+        # Move any user definitions created by autoloaded files to
+        # builtins, and clear out the user definitions list. This
+        # means that any autoloaded definitions become shared
+        # between users and no longer disappear after a Quit[].
+        #
+        # Autoloads that accidentally define a name in Global`
+        # could cause confusion, so check for this.
+
+        for name in defs.user:
+            if name.startswith("Global`"):
+                raise ValueError("autoload defined %s." % name)
 
 
 class PyMathicsLoadException(Exception):
@@ -63,7 +87,6 @@ class Definitions(object):
 
         if add_builtin:
             from mathics.builtin import modules, contribute
-            from mathics.core.evaluation import Evaluation
             from mathics.settings import ROOT_DIR
 
             loaded = False
@@ -78,22 +101,17 @@ class Definitions(object):
                 contribute(self)
                 for module in extension_modules:
                     try:
-                        loaded_module = self.load_pymathics_module(
-                            module, remove_on_quit=False
-                        )
-                    except PyMathicsLoadException as e:
+                        self.load_pymathics_module(module, remove_on_quit=False)
+                    except PyMathicsLoadException:
                         raise
-                    except ImportError as e:
+                    except ImportError:
                         raise
 
                 if builtin_filename is not None:
                     builtin_file = open(builtin_filename, "wb")
                     pickle.dump(self.builtin, builtin_file, -1)
 
-            # Load symbols from the autoload folder
-            for root, dirs, files in os.walk(os.path.join(ROOT_DIR, "autoload")):
-                for path in [os.path.join(root, f) for f in files if f.endswith(".m")]:
-                    Expression("Get", String(path)).evaluate(Evaluation(self))
+            autoload_files(self, ROOT_DIR, "autoload")
 
             # Move any user definitions created by autoloaded files to
             # builtins, and clear out the user definitions list. This
@@ -106,9 +124,15 @@ class Definitions(object):
             for name in self.user:
                 if name.startswith("Global`"):
                     raise ValueError("autoload defined %s." % name)
+
             self.builtin.update(self.user)
             self.user = {}
             self.clear_cache()
+
+        # FIXME load dynamically as we do other things
+        import mathics.format.asy  # noqa
+        import mathics.format.json  # noqa
+        import mathics.format.svg  # noqa
 
     def load_pymathics_module(self, module, remove_on_quit=True):
         """
@@ -370,11 +394,11 @@ class Definitions(object):
             return name
 
         with_context = current_context + name
-        if not self.have_definition(with_context):
-            for ctx in self.get_context_path():
-                n = ctx + name
-                if self.have_definition(n):
-                    return n
+        # if not self.have_definition(with_context):
+        for ctx in self.get_context_path():
+            n = ctx + name
+            if self.have_definition(n):
+                return n
         return with_context
 
     def get_package_names(self) -> typing.List[str]:
@@ -475,6 +499,8 @@ class Definitions(object):
             self.lookup_cache[original_name] = name
         elif not only_if_exists:
             definition = Definition(name=name)
+            if name[-1] != "`":
+                self.user[name] = definition
 
         return definition
 

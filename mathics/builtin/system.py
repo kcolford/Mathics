@@ -16,6 +16,7 @@ from mathics.version import __version__
 from mathics.core.expression import (
     Expression,
     Integer,
+    Integer0,
     Real,
     String,
     SymbolFailed,
@@ -26,6 +27,13 @@ from mathics.core.expression import (
 from mathics.builtin.base import Builtin, Predefined
 from mathics import version_string
 from mathics.builtin.strings import to_regex
+
+try:
+    import psutil
+except:
+    have_psutil = False
+else:
+    have_psutil = True
 
 
 class Aborted(Predefined):
@@ -449,7 +457,7 @@ class VersionNumber(Predefined):
     """
 
     name = "$VersionNumber"
-    value = 6.0
+    value = 10.0
 
     def evaluate(self, evaluation) -> Real:
         # Make this be whatever the latest Mathematica release is,
@@ -457,47 +465,80 @@ class VersionNumber(Predefined):
         return Real(self.value)
 
 
-class SystemMemory(Predefined):
-    """
-    <dl>
-      <dt>'$SystemMemory'
-      <dd>Returns the total amount of physical memory.
-    </dl>
+if have_psutil:
 
-    >> $SystemMemory
-     = ...
-    """
+    class SystemMemory(Predefined):
+        """
+        <dl>
+          <dt>'$SystemMemory'
+          <dd>Returns the total amount of physical memory.
+        </dl>
 
-    name = "$SystemMemory"
-    
-    def evaluate(self, evaluation) -> Integer:
-        try:
-            import psutil
+        >> $SystemMemory
+         = ...
+        """
+
+        name = "$SystemMemory"
+
+        def evaluate(self, evaluation) -> Integer:
             totalmem = psutil.virtual_memory().total
-            return Integer(total)
-        except:
-            return String(SymbolFailed)
-    
+            return Integer(totalmem)
 
-class MemoryAvailable(Builtin):
-    """
-    <dl>
-      <dt>'MemoryAvailable'
-      <dd>Returns the amount of the available physical memory.
-    </dl>
+    class MemoryAvailable(Builtin):
+        """
+        <dl>
+          <dt>'MemoryAvailable'
+          <dd>Returns the amount of the available physical memory.
+        </dl>
 
-    >> MemoryAvailable[]
-     = ...
-    """
-    
-    def apply_0(self, evaluation) -> Integer:
-        """MemoryAvailable[]"""
-        try:
-            import psutil
+        >> MemoryAvailable[]
+         = ...
+
+        The relationship between $SystemMemory, MemoryAvailable, and MemoryInUse:
+        >> $SystemMemory > MemoryAvailable[] > MemoryInUse[]
+         = True
+        """
+
+        def apply(self, evaluation) -> Integer:
+            """MemoryAvailable[]"""
             totalmem = psutil.virtual_memory().available
-            return Integer(total)
-        except:
-            return String(SymbolFailed)
+            return Integer(totalmem)
+
+
+else:
+
+    class SystemMemory(Predefined):
+        """
+        <dl>
+          <dt>'$SystemMemory'
+          <dd>Returns the total amount of physical memory when Python module "psutil" is installed.
+          This system however doesn't have that installed, so -1 is returned instead.
+        </dl>
+
+        >> $SystemMemory
+         = -1
+        """
+
+        name = "$SystemMemory"
+
+        def evaluate(self, evaluation) -> Integer:
+            return Integer(-1)
+
+    class MemoryAvailable(Builtin):
+        """
+        <dl>
+          <dt>'MemoryAvailable'
+          <dd>Returns the amount of the available physical when Python module "psutil" is installed.
+          This system however doesn't have that installed, so -1 is returned instead.
+        </dl>
+
+        >> MemoryAvailable[]
+         = -1
+        """
+
+        def apply(self, evaluation) -> Integer:
+            """MemoryAvailable[]"""
+            return Integer(-1)
 
 
 class MemoryInUse(Builtin):
@@ -510,20 +551,24 @@ class MemoryInUse(Builtin):
     >> MemoryInUse[]
      = ...
     """
-    
+
     def apply_0(self, evaluation) -> Integer:
         """MemoryInUse[]"""
         # Partially borrowed from https://code.activestate.com/recipes/577504/
         from itertools import chain
         from sys import getsizeof
+
         definitions = evaluation.definitions
         seen = set()
         default_size = getsizeof(0)
-        handlers = {tuple: iter,
-                    list: iter,
-                    dict: (lambda d: chain.from_iterable(d.items())),
-                    set: iter,
-                    frozenset: iter,}
+        handlers = {
+            tuple: iter,
+            list: iter,
+            dict: (lambda d: chain.from_iterable(d.items())),
+            set: iter,
+            frozenset: iter,
+        }
+
         def sizeof(obj):
             if id(obj) in seen:
                 return 0
@@ -536,10 +581,6 @@ class MemoryInUse(Builtin):
             return s
 
         return Integer(sizeof(definitions))
-
-                
-            
-        
 
 
 class Share(Builtin):
@@ -555,14 +596,14 @@ class Share(Builtin):
     >> Share[]
      = ...
     """
-    
+
     def apply_0(self, evaluation) -> Integer:
         """Share[]"""
         # TODO: implement a routine that swap all the definitions,
         # collecting repeated symbols and expressions, and then
         # remplace them by references.
         # Return the amount of memory recovered.
-        return Integer(0)
+        return Integer0
 
     def apply_1(self, symbol, evaluation) -> Integer:
         """Share[symbol_Symbol]"""
@@ -570,6 +611,4 @@ class Share(Builtin):
         # collecting repeated symbols and expressions, and then
         # remplace them by references.
         # Return the amount of memory recovered.
-        return Integer(0)
-
-
+        return Integer0

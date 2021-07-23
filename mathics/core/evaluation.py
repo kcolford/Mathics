@@ -13,7 +13,13 @@ from typing import Tuple
 from mathics_scanner import TranslateError
 
 from mathics import settings
-from mathics.core.expression import ensure_context, KeyComparable, SymbolAborted, SymbolList, SymbolNull
+from mathics.core.expression import (
+    ensure_context,
+    KeyComparable,
+    SymbolAborted,
+    SymbolList,
+    SymbolNull,
+)
 
 FORMATS = [
     "StandardForm",
@@ -255,6 +261,9 @@ class Evaluation(object):
         # status of last evaluate
         self.exc_result = self.SymbolNull
         self.last_eval = None
+        # Necesary to handle OneIdentity on
+        # lhs in assignment
+        self.ignore_oneidentity = False
 
     def parse(self, query):
         "Parse a single expression and print the messages."
